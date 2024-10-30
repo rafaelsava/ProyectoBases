@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.layout.Pane?>
+<?import javafx.scene.text.Font?>
+
+
+<AnchorPane id="AnchorPane" prefHeight="424.0" prefWidth="635.0" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/23.0.1" fx:controller="controlador.EstructuraTablaController">
+   <children>
+      <Pane layoutX="14.0" layoutY="9.0" prefHeight="405.0" prefWidth="608.0">
+         <children>
+            <ComboBox fx:id="cbxDB" layoutX="46.0" layoutY="67.0" onAction="#doDB" prefHeight="25.0" prefWidth="195.0" promptText="Seleccione una DB" />
+            <ComboBox fx:id="cbxTable" layoutX="343.0" layoutY="67.0" onAction="#doTable" prefHeight="25.0" prefWidth="201.0" promptText="Seleccione una Tabla" />
+            <Label layoutX="23.0" layoutY="14.0" text="Elige una tabla y mira su estructura">
+               <font>
+                  <Font size="18.0" />
+               </font>
+            </Label>
+            <TableView fx:id="tblStructure" layoutX="42.0" layoutY="117.0" prefHeight="229.0" prefWidth="502.0" />
+            <Button fx:id="btnAddRegisters" layoutX="95.0" layoutY="366.0" mnemonicParsing="false" onAction="#doAddRegisters" prefHeight="25.0" prefWidth="133.0" text="Agregar Registros" />
+            <Button fx:id="btnSearch" layoutX="354.0" layoutY="366.0" mnemonicParsing="false" onAction="#doSearch" prefHeight="25.0" prefWidth="133.0" text="Buscar" />
+         </children>
+      </Pane>
+   </children>
+</AnchorPane>
