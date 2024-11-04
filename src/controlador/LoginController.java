@@ -4,6 +4,7 @@
  */
 package controlador;
 
+import javax.swing.JOptionPane;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -44,13 +45,24 @@ public class LoginController implements Initializable {
     }    
 
     @FXML
-    private void doConnect(ActionEvent event) {
-        System.out.println("Conectando");
-        System.out.println(txtIP.getText());
-        System.out.println(txtPort.getText());
-        System.out.println(txtUser.getText());
-        System.out.println(txtPassword.getText());
+    private void doConnect(ActionEvent event) {  
+        String user = this.txtUser.getText();
+        String password = this.txtPassword.getText();
+        String server = this.txtIP.getText();
+        String port = this.txtPort.getText();
+        DBconectionManager Dbconection = new DBconectionManager();
+        try{
+            Dbconection.connection(user, password, server, port);
+            this.changeStage();
+            JOptionPane.showMessageDialog(null, "Conexión exitosa...");
+        }
+        catch(Exception e){
+            JOptionPane.showMessageDialog(null, "Error de carga...");
+        }
         
+        
+    }
+    public void changeStage (){
         try{
             FXMLLoader loader= new FXMLLoader(getClass().getResource("/vista/EstructuraTabla.fxml"));
             Parent root=loader.load();
@@ -72,8 +84,6 @@ public class LoginController implements Initializable {
         catch(IOException ex){
             java.util.logging.Logger.getLogger(EstructuraTablaController.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }  
-        
-        
     }
     
 }
