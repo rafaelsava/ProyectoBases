@@ -45,6 +45,8 @@ public class EstructuraTablaController implements Initializable {
     private Connection connection;
     @FXML
     private Button btnQuery;
+    @FXML
+    private Button btnShowAll;
     /**
      * Initializes the controller class.
      */
@@ -78,7 +80,7 @@ public class EstructuraTablaController implements Initializable {
         String selectedDatabase = this.cbxDB.getValue();
         String selectedTable = this.cbxTable.getValue();
         if (selectedDatabase != null && selectedTable != null) {
-            loadTableData(selectedDatabase, selectedTable, connection);
+            loadTableData(selectedDatabase, selectedTable, connection, "search");
         }
     }
     
@@ -115,11 +117,11 @@ public class EstructuraTablaController implements Initializable {
     
     //Hacer columnas dinamicas y consulta sql para llenar el table view de la interfaz
     
-      public void loadTableData(String databaseName, String tableName, Connection connection) {
+      public void loadTableData(String databaseName, String tableName, Connection connection, String typeQuery) {
         this.tblStructure.getItems().clear();
         this.tblStructure.getColumns().clear(); 
         
-        String query = "DESCRIBE " + databaseName + "." + tableName;
+        String query = typeQuery.equals("search") ? "DESCRIBE " + databaseName + "." + tableName : "SELECT * FROM " + databaseName + "." + tableName;
         
          try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
             ResultSetMetaData metaData = resultSet.getMetaData();
@@ -153,6 +155,15 @@ public class EstructuraTablaController implements Initializable {
 
     @FXML
     private void doQuery(ActionEvent event) {
+    }
+
+    @FXML
+    private void doShowAll(ActionEvent event) {
+        String selectedDatabase = this.cbxDB.getValue();
+        String selectedTable = this.cbxTable.getValue();
+        if (selectedDatabase != null && selectedTable != null) {
+            loadTableData(selectedDatabase, selectedTable, connection, "searchAll");
+        }
     }
 
 }
