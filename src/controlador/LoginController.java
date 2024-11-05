@@ -20,7 +20,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
-
+import modelo.DBconectionManager;
 /**
  * FXML Controller class
  *
@@ -39,7 +39,6 @@ public class LoginController implements Initializable {
     @FXML
     private TextField txtPassword;
     Connection conectar = null;
-
     /**
      * Initializes the controller class.
      */
@@ -54,9 +53,10 @@ public class LoginController implements Initializable {
         String password = this.txtPassword.getText();
         String server = this.txtIP.getText();
         String port = this.txtPort.getText();
+        DBconectionManager conector = new DBconectionManager(user,password,server,port);
        
         try{
-            this.connection(user, password, server, port);
+            conectar = conector.connection();
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/vista/EstructuraTabla.fxml"));
             Parent root = loader.load();
             EstructuraTablaController tabla = loader.getController(); 
@@ -80,7 +80,6 @@ public class LoginController implements Initializable {
             JOptionPane.showMessageDialog(null, "Error de carga... "+e.toString());
         }
         
-        
     }
     public void changeStage (){
         try{
@@ -98,23 +97,11 @@ public class LoginController implements Initializable {
             myStage.close();            
         
             stage.show();
-            
-            
         }
         catch(IOException ex){
             java.util.logging.Logger.getLogger(EstructuraTablaController.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }  
     }
-    public Connection connection(String user, String password, String server, String port){
-        String url = "jdbc:mysql://"+server+":"+port;
-        try{
-            conectar = DriverManager.getConnection(url,user,password);
-            JOptionPane.showMessageDialog(null, "La conexion se ha realizado con exito");
-        }
-        catch(Exception e){
-            JOptionPane.showMessageDialog(null, "Error de autentificación de usuario..."+e.toString());
-        }
-        return conectar;
-    }
+
     
 }

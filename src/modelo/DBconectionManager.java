@@ -2,7 +2,7 @@
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
  */
-package controlador;
+package modelo;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -14,7 +14,20 @@ import javax.swing.JOptionPane;
  */
 public class DBconectionManager {
     Connection conectar = null;
-    public Connection connection(String user, String password, String server, String port){
+    String user;
+    String password;
+    String server;
+    String port;
+
+    public DBconectionManager(String user, String password, String server, String port) {
+        this.user = user;
+        this.password = password;
+        this.server = server;
+        this.port = port;
+    }
+   
+    
+    public Connection connection(){
         String url = "jdbc:mysql://"+server+":"+port;
         try{
             conectar = DriverManager.getConnection(url,user,password);
