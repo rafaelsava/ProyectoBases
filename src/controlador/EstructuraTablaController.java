@@ -43,6 +43,8 @@ public class EstructuraTablaController implements Initializable {
     @FXML
     private Button btnSearch;
     private Connection connection;
+    @FXML
+    private Button btnQuery;
     /**
      * Initializes the controller class.
      */
@@ -117,7 +119,7 @@ public class EstructuraTablaController implements Initializable {
         this.tblStructure.getItems().clear();
         this.tblStructure.getColumns().clear(); 
         
-        String query = "SELECT * FROM " + databaseName + "." + tableName;
+        String query = "DESCRIBE " + databaseName + "." + tableName;
         
          try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
             ResultSetMetaData metaData = resultSet.getMetaData();
@@ -148,5 +150,9 @@ public class EstructuraTablaController implements Initializable {
             e.printStackTrace();
         }
       }
+
+    @FXML
+    private void doQuery(ActionEvent event) {
+    }
 
 }
