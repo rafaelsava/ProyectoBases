@@ -373,6 +373,7 @@ public class QueriesController implements Initializable {
             QueryResultController queryResult = loader.getController();
             queryResult.setQuery(this.finalQuery);
             queryResult.setConnection(this.connection);
+            queryResult.setDBName(this.dataBaseName);
                                                                    
             Stage stage=new Stage();
             stage.setScene(scene);

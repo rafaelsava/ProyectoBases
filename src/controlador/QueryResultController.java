@@ -24,6 +24,8 @@ import javafx.scene.control.Button;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.stage.Stage;
+import controlador.QueriesController;
+
 
 
 /**
@@ -42,6 +44,8 @@ public class QueryResultController implements Initializable {
     @FXML
     private Button btnBack;
     
+    private String DBName;
+    
 
     /**
      * Initializes the controller class.
@@ -53,6 +57,11 @@ public class QueryResultController implements Initializable {
     public void setConnection(Connection connection) {
         this.connection = connection;
         this.loadTableData();
+        
+    }
+    
+    public void setDBName(String nombre){
+        this.DBName = nombre;
         
     }
     
@@ -108,6 +117,11 @@ public class QueryResultController implements Initializable {
             //stage.setOnCloseRequest(even->{even.consume();});
             stage.setResizable(false);
             stage.setTitle("Queries");
+            
+            QueriesController queryConfig = loader.getController();
+            queryConfig.setConnection(this.connection);
+            queryConfig.setDBName(this.DBName);
+            
         
             stage.show();
             
