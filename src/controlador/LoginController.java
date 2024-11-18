@@ -44,11 +44,16 @@ public class LoginController implements Initializable {
      */
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        
         // TODO
+        this.txtIP.setText("localhost");
+        this.txtIP.setDisable(true);
+        this.txtPort.setText("3306");
+        this.txtPort.setDisable(true);
     }    
 
     @FXML
-    private void doConnect(ActionEvent event) {  
+    private void doConnect(ActionEvent event) {
         String user = this.txtUser.getText();
         String password = this.txtPassword.getText();
         String server = this.txtIP.getText();
