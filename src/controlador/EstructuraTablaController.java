@@ -4,6 +4,7 @@
  */
 package controlador;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.net.URL;
 import java.util.ResourceBundle;
@@ -23,7 +24,13 @@ import java.sql.SQLException;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.sql.ResultSetMetaData;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.input.MouseEvent;
+import javafx.stage.Stage;
+import controlador.QueriesController;
+import java.util.HashSet;
 
 /**
  * FXML Controller class
@@ -47,6 +54,8 @@ public class EstructuraTablaController implements Initializable {
     private Button btnQuery;
     @FXML
     private Button btnShowAll;
+    
+  
     /**
      * Initializes the controller class.
      */
@@ -155,6 +164,31 @@ public class EstructuraTablaController implements Initializable {
 
     @FXML
     private void doQuery(ActionEvent event) {
+            try{
+            FXMLLoader loader= new FXMLLoader(getClass().getResource("/vista/Queries.fxml"));
+            Parent root=loader.load();
+            Scene scene=new Scene(root);
+            QueriesController query = loader.getController();
+            query.setDBName(this.cbxDB.getValue());
+            query.setConnection(this.connection);
+                
+                
+                                   
+            Stage stage=new Stage();
+            stage.setScene(scene);
+            //stage.setOnCloseRequest(even->{even.consume();});
+            stage.setResizable(false);
+            stage.setTitle("Manejo de clientes");
+        
+            stage.show();
+            
+            Stage myStage=(Stage)this.btnQuery.getScene().getWindow();
+            myStage.close();
+            
+        }
+        catch(IOException ex){
+            java.util.logging.Logger.getLogger(QueriesController.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
     }
 
     @FXML
