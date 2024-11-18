@@ -80,8 +80,9 @@ public class QueriesController implements Initializable {
     private String previousTable1 = null;
     private String select = "SELECT * ";
     private String from = "FROM ";
-    private String join = "INNER JOIN ";
-    private String on = "ON ";
+    private String from2 = ", ";
+    private String join = "WHERE ";
+    private String on = " = ";
     private String condition1 = "";
     private String condition2 = "";
     private String finalQuery = this.select + this.from + this.condition1 + this.condition2;
@@ -114,7 +115,7 @@ public class QueriesController implements Initializable {
 
     @FXML
     private void doKey2(ActionEvent event) {
-        this.on = "ON ";
+        this.on = "";
         if (this.cbxKey1.getValue() != null) {
             this.on += this.cbxTable1.getValue() + "." + this.cbxKey1.getValue() + " = " + this.cbxTable2.getValue() + "." + this.cbxKey2.getValue();
         }
@@ -174,7 +175,7 @@ public class QueriesController implements Initializable {
         if (tableComboBox == this.cbxTable1) {
             this.from = "FROM " + tablePrefix + " ";
         } else {
-            this.join = "INNER JOIN " + tablePrefix + " ";
+            this.from2 = ", "+tablePrefix +" ";
         }
         
         fieldsPane.getChildren().clear();
@@ -229,15 +230,31 @@ public class QueriesController implements Initializable {
         ComboBox<String> likeBox = option == 1 ? this.cbxLike1 : this.cbxLike2;
 
         if (conditionBox.getValue() != null && opBox.getValue() != null) {
-            String condition = (option == 1 ? " WHERE " : " AND ") + this.buildCondition(conditionBox, opBox, conditionText, likeBox);
+            // Determinar prefijo según la tabla seleccionada
+            String prefix;
+            if (this.rbt1Table.isSelected()) {
+                prefix = (option == 1 ? " WHERE " : " AND ");
+            } else if (this.rbt2Table.isSelected()) {
+                prefix = " AND ";
+            } else {
+                prefix = ""; // Por si acaso ninguna tabla está seleccionada (fallback)
+            }
+
+            // Construir la condición con el prefijo adecuado
+            String condition = prefix + this.buildCondition(conditionBox, opBox, conditionText, likeBox);
+
+            // Asignar la condición a condition1 o condition2 según la opción
             if (option == 1) {
                 this.condition1 = condition;
             } else {
                 this.condition2 = condition;
             }
+
+            // Actualizar la consulta final
             this.updateFinalQuery();
         }
     }
+
 
     // Construye la condición para la consulta
     private String buildCondition(ComboBox<String> conditionBox, ComboBox<String> opBox, TextField conditionText, ComboBox<String> likeBox) {
@@ -279,7 +296,7 @@ public class QueriesController implements Initializable {
 
     // Actualiza la consulta final y la muestra en el área de vista previa
     private void updateFinalQuery() {
-        this.finalQuery = this.select + " " + this.from + (this.rbt2Table.isSelected() ? this.join + this.on : "") + this.condition1 + this.condition2;
+        this.finalQuery = this.select + " " + this.from + (this.rbt2Table.isSelected() ? this.from2+ this.join + this.on : "") + this.condition1 + this.condition2;
         this.txtQueryPreview.setText(this.finalQuery);
     }
 
@@ -313,6 +330,7 @@ public class QueriesController implements Initializable {
     @FXML
     private void setFields1(ActionEvent event) {
         ObservableList<String> tables = this.getTables(this.dataBaseName, this.connection);
+        this.updateFinalQuery();
         this.cbxTable1.setItems(tables);
         this.cbxKey2.setDisable(true);
         this.cbxKey1.setDisable(true);
