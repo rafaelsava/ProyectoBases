@@ -20,10 +20,11 @@
                </font>
             </Label>
             <TableView fx:id="tblStructure" layoutX="42.0" layoutY="117.0" prefHeight="229.0" prefWidth="502.0" />
-            <Button fx:id="btnAddRegisters" layoutX="95.0" layoutY="366.0" mnemonicParsing="false" onAction="#doAddRegisters" prefHeight="25.0" prefWidth="133.0" text="Agregar Registros" />
+            <Button fx:id="btnAddRegisters" layoutX="55.0" layoutY="366.0" mnemonicParsing="false" onAction="#doAddRegisters" prefHeight="25.0" prefWidth="133.0" text="Agregar Registros" />
             <Button fx:id="btnSearch" layoutX="378.0" layoutY="67.0" mnemonicParsing="false" onAction="#doSearch" prefHeight="25.0" prefWidth="61.0" text="Buscar" />
-            <Button fx:id="btnQuery" layoutX="322.0" layoutY="366.0" mnemonicParsing="false" onAction="#doQuery" prefHeight="25.0" prefWidth="133.0" text="Hacer Query" />
+            <Button fx:id="btnEditarResgisto" layoutX="398.0" layoutY="366.0" mnemonicParsing="false" onAction="#doEditar" prefHeight="25.0" prefWidth="133.0" text="Editar Registro" />
             <Button fx:id="btnShowAll" layoutX="450.0" layoutY="67.0" mnemonicParsing="false" onAction="#doShowAll" prefHeight="25.0" prefWidth="94.0" text="Mostrar Datos" />
+            <Button fx:id="btnQuery1" layoutX="227.0" layoutY="366.0" mnemonicParsing="false" onAction="#doQuery" prefHeight="25.0" prefWidth="133.0" text="Hacer Query" />
          </children>
       </Pane>
    </children>
