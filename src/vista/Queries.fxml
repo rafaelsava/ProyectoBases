@@ -54,6 +54,7 @@
             <ComboBox fx:id="cbxTable2" layoutX="407.0" layoutY="126.0" onAction="#doTable2" prefWidth="150.0" promptText="Tabla 2" />
             <ComboBox fx:id="cbxTable1" layoutX="74.0" layoutY="126.0" onAction="#doTable1" prefWidth="150.0" promptText="Tabla 1" />
             <Text layoutX="234.0" layoutY="181.0" strokeType="OUTSIDE" strokeWidth="0.0" text="Join" textAlignment="CENTER" wrappingWidth="152.49154663085938" />
+            <Button fx:id="btnBack" layoutX="434.0" layoutY="52.0" mnemonicParsing="false" onAction="#doBack" prefHeight="25.0" prefWidth="121.0" text="Volver" />
          </children>
       </Pane>
    </children>

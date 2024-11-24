@@ -86,6 +86,8 @@ public class QueriesController implements Initializable {
     private String condition1 = "";
     private String condition2 = "";
     private String finalQuery = this.select + this.from + this.condition1 + this.condition2;
+    @FXML
+    private Button btnBack;
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
@@ -409,5 +411,33 @@ public class QueriesController implements Initializable {
             java.util.logging.Logger.getLogger(QueriesController.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }        
         
+    }
+
+    @FXML
+    private void doBack(ActionEvent event) {
+                    try{
+            FXMLLoader loader= new FXMLLoader(getClass().getResource("/vista/EstructuraTabla.fxml"));
+            Parent root=loader.load();
+            Scene scene=new Scene(root);
+            
+            EstructuraTablaController tabla = loader.getController(); 
+            tabla.setConnection(this.connection);
+            tabla.fillcombo(this.connection);
+                                                                   
+            Stage stage=new Stage();
+            stage.setScene(scene);
+            //stage.setOnCloseRequest(even->{even.consume();});
+            stage.setResizable(false);
+            stage.setTitle("Resultado del Query");
+        
+            stage.show();
+            
+            Stage myStage=(Stage)this.btnSearch.getScene().getWindow();
+            myStage.close();
+            
+        }
+        catch(IOException ex){
+            java.util.logging.Logger.getLogger(QueriesController.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+        }
     }
 }

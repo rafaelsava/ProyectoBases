@@ -164,7 +164,10 @@ public class EstructuraTablaController implements Initializable {
 
     @FXML
     private void doQuery(ActionEvent event) {
-            try{
+        
+        if(this.cbxDB.getValue()!= null){
+            
+                        try{
             FXMLLoader loader= new FXMLLoader(getClass().getResource("/vista/Queries.fxml"));
             Parent root=loader.load();
             Scene scene=new Scene(root);
@@ -189,6 +192,12 @@ public class EstructuraTablaController implements Initializable {
         catch(IOException ex){
             java.util.logging.Logger.getLogger(QueriesController.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
         }
+            
+        }
+        else{
+            JOptionPane.showMessageDialog(null, "Debe seleccionar una base de datos");
+        }
+
     }
 
     @FXML
