@@ -54,15 +54,14 @@ public class EstructuraTablaController implements Initializable {
     private Button btnQuery;
     @FXML
     private Button btnShowAll;
-    
-  
+
     /**
      * Initializes the controller class.
      */
-    public void setConnection (Connection connection){
+    public void setConnection(Connection connection) {
         this.connection = connection;
     }
-    
+
     @Override
     public void initialize(URL url, ResourceBundle rb) {
     }
@@ -70,7 +69,7 @@ public class EstructuraTablaController implements Initializable {
     @FXML
     private void doDB(ActionEvent event) {
         String selectedDatabase = this.cbxDB.getValue();
-        if(selectedDatabase != null && !selectedDatabase.isEmpty()){
+        if (selectedDatabase != null && !selectedDatabase.isEmpty()) {
             ObservableList<String> tables = getTables(selectedDatabase, connection);
             this.cbxTable.setItems(tables);
         }
@@ -82,6 +81,84 @@ public class EstructuraTablaController implements Initializable {
 
     @FXML
     private void doAddRegisters(ActionEvent event) {
+        String selectedDatabase = this.cbxDB.getValue();
+        String selectedTable = this.cbxTable.getValue();
+
+        if (selectedDatabase == null || selectedTable == null) {
+            showMessage("Debe seleccionar una base de datos y una tabla.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Obtén la estructura de la tabla para saber los tipos de datos.
+        ArrayList<String[]> columnsWithTypes = getColumnsWithTypes(selectedDatabase, selectedTable);
+
+        ArrayList<String> values = new ArrayList<>();
+
+        // Solicita al usuario valores para cada columna.
+        for (String[] column : columnsWithTypes) {
+            String columnName = column[0];
+            String columnType = column[1]; // Tipo de dato
+            String inputMessage = "Ingrese el valor para '" + columnName + "' (Tipo: " + columnType + "):";
+
+            String value = JOptionPane.showInputDialog(null, inputMessage, "Agregar Registro", JOptionPane.QUESTION_MESSAGE);
+
+            if (value == null) { // Si el usuario cancela.
+                showMessage("Operación cancelada.", "Información", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            // Si está vacío, se usa NULL.
+            values.add(value.trim().isEmpty() ? "NULL" : "'" + value + "'");
+        }
+
+        // Construye y ejecuta la consulta SQL INSERT INTO.
+        insertIntoTable(selectedDatabase, selectedTable, columnsWithTypes, values);
+    }
+
+    private ArrayList<String[]> getColumnsWithTypes(String databaseName, String tableName) {
+        ArrayList<String[]> columnsWithTypes = new ArrayList<>();
+        String query = "DESCRIBE " + databaseName + "." + tableName;
+
+        try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
+            while (resultSet.next()) {
+                String columnName = resultSet.getString("Field");
+                String columnType = resultSet.getString("Type");
+                columnsWithTypes.add(new String[]{columnName, columnType});
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return columnsWithTypes;
+    }
+
+    private void insertIntoTable(String databaseName, String tableName, ArrayList<String[]> columnsWithTypes, ArrayList<String> values) {
+        // Construye la consulta INSERT INTO.
+        StringBuilder query = new StringBuilder("INSERT INTO " + databaseName + "." + tableName + " (");
+
+        for (int i = 0; i < columnsWithTypes.size(); i++) {
+            query.append(columnsWithTypes.get(i)[0]);
+            if (i < columnsWithTypes.size() - 1) {
+                query.append(", ");
+            }
+        }
+        query.append(") VALUES (");
+        for (int i = 0; i < values.size(); i++) {
+            query.append(values.get(i));
+            if (i < values.size() - 1) {
+                query.append(", ");
+            }
+        }
+        query.append(")");
+
+        // Ejecuta la consulta.
+        try (Statement statement = connection.createStatement()) {
+            statement.executeUpdate(query.toString());
+            showMessage("Registro agregado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            loadTableData(databaseName, tableName, connection, "searchAll");
+        } catch (SQLException e) {
+            showMessage("Error al agregar el registro: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     @FXML
@@ -92,50 +169,46 @@ public class EstructuraTablaController implements Initializable {
             loadTableData(selectedDatabase, selectedTable, connection, "search");
         }
     }
-    
+
     //Gestion temporal de llenado de los combo box y la tabla.
-    
-    
-    public void fillcombo(Connection connection){
+    public void fillcombo(Connection connection) {
         ArrayList<String> dbList = new ArrayList<String>();
         ObservableList<String> databases = FXCollections.observableArrayList();
-        try(Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("SHOW DATABASES")){
-             while (resultSet.next()) {
+        try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery("SHOW DATABASES")) {
+            while (resultSet.next()) {
                 databases.add(resultSet.getString(1));
             }
-        }catch (SQLException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
         this.cbxDB.setItems(databases);
     }
-    
+
     //Llenar el combo box de las tablas correspondientes a la base de datos.
-    
-    public ObservableList<String> getTables(String dataBaseName, Connection connection){
+    public ObservableList<String> getTables(String dataBaseName, Connection connection) {
         ObservableList<String> tables = FXCollections.observableArrayList();
         String query = "SHOW TABLES FROM " + dataBaseName;
         try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
             while (resultSet.next()) {
-            tables.add(resultSet.getString(1));  // Obtener el nombre de la tabla
-        }
-        }catch (SQLException e) {
+                tables.add(resultSet.getString(1));  // Obtener el nombre de la tabla
+            }
+        } catch (SQLException e) {
             e.printStackTrace();
         }
         return tables;
     }
-    
+
     //Hacer columnas dinamicas y consulta sql para llenar el table view de la interfaz
-    
-      public void loadTableData(String databaseName, String tableName, Connection connection, String typeQuery) {
+    public void loadTableData(String databaseName, String tableName, Connection connection, String typeQuery) {
         this.tblStructure.getItems().clear();
-        this.tblStructure.getColumns().clear(); 
-        
+        this.tblStructure.getColumns().clear();
+
         String query = typeQuery.equals("search") ? "DESCRIBE " + databaseName + "." + tableName : "SELECT * FROM " + databaseName + "." + tableName;
-        
-         try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
+
+        try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
             ResultSetMetaData metaData = resultSet.getMetaData();
             int columnCount = metaData.getColumnCount();
-            
+
             for (int i = 1; i <= columnCount; i++) {
                 final int columnIndex = i;
                 String columnName = metaData.getColumnName(i);
@@ -157,44 +230,40 @@ public class EstructuraTablaController implements Initializable {
             }
 
             tblStructure.setItems(data);
-         }catch (SQLException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
-      }
+    }
 
     @FXML
     private void doQuery(ActionEvent event) {
-        
-        if(this.cbxDB.getValue()!= null){
-            
-                        try{
-            FXMLLoader loader= new FXMLLoader(getClass().getResource("/vista/Queries.fxml"));
-            Parent root=loader.load();
-            Scene scene=new Scene(root);
-            QueriesController query = loader.getController();
-            query.setDBName(this.cbxDB.getValue());
-            query.setConnection(this.connection);
-                
-                
-                                   
-            Stage stage=new Stage();
-            stage.setScene(scene);
-            //stage.setOnCloseRequest(even->{even.consume();});
-            stage.setResizable(false);
-            stage.setTitle("Manejo de clientes");
-        
-            stage.show();
-            
-            Stage myStage=(Stage)this.btnQuery.getScene().getWindow();
-            myStage.close();
-            
-        }
-        catch(IOException ex){
-            java.util.logging.Logger.getLogger(QueriesController.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
-        }
-            
-        }
-        else{
+
+        if (this.cbxDB.getValue() != null) {
+
+            try {
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/vista/Queries.fxml"));
+                Parent root = loader.load();
+                Scene scene = new Scene(root);
+                QueriesController query = loader.getController();
+                query.setDBName(this.cbxDB.getValue());
+                query.setConnection(this.connection);
+
+                Stage stage = new Stage();
+                stage.setScene(scene);
+                //stage.setOnCloseRequest(even->{even.consume();});
+                stage.setResizable(false);
+                stage.setTitle("Manejo de clientes");
+
+                stage.show();
+
+                Stage myStage = (Stage) this.btnQuery.getScene().getWindow();
+                myStage.close();
+
+            } catch (IOException ex) {
+                java.util.logging.Logger.getLogger(QueriesController.class.getName()).log(java.util.logging.Level.SEVERE, null, ex);
+            }
+
+        } else {
             JOptionPane.showMessageDialog(null, "Debe seleccionar una base de datos");
         }
 
@@ -207,6 +276,10 @@ public class EstructuraTablaController implements Initializable {
         if (selectedDatabase != null && selectedTable != null) {
             loadTableData(selectedDatabase, selectedTable, connection, "searchAll");
         }
+    }
+
+    private void showMessage(String message, String title, int messageType) {
+        JOptionPane.showMessageDialog(null, message, title, messageType);
     }
 
 }
