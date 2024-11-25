@@ -25,6 +25,8 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.stage.Stage;
 import controlador.QueriesController;
+import javafx.scene.control.TextInputDialog;
+import javax.swing.JOptionPane;
 
 
 
@@ -33,6 +35,8 @@ import controlador.QueriesController;
  *
  * @author rafae
  */
+
+
 public class QueryResultController implements Initializable {
 
     @FXML
@@ -45,6 +49,8 @@ public class QueryResultController implements Initializable {
     private Button btnBack;
     
     private String DBName;
+    @FXML
+    private Button btnVista;
     
 
     /**
@@ -135,5 +141,34 @@ public class QueryResultController implements Initializable {
         
     
     }
-    
+
+ @FXML
+private void doVista(ActionEvent event) {
+    // Mostrar un JOptionPane de confirmación
+    TextInputDialog dialog = new TextInputDialog();
+    dialog.setTitle("Crear Vista");
+    dialog.setHeaderText("Ingrese el nombre de la vista:");
+    dialog.setContentText("Nombre:");
+
+    // Recoger la entrada del usuario
+    String viewName = dialog.showAndWait().orElse(null);
+
+    // Validar si se ingresó un nombre
+    if (viewName == null || viewName.trim().isEmpty()) {
+        JOptionPane.showMessageDialog(null, "Debe ingresar un nombre válido para la vista.", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+    }
+
+    // Construir el query con el nombre de la base de datos y la vista
+    String createViewQuery = "CREATE VIEW " + this.DBName + "." + viewName + " AS " + this.query;
+
+    try (Statement statement = connection.createStatement()) {
+        // Crear la vista
+        statement.executeUpdate(createViewQuery);
+        JOptionPane.showMessageDialog(null, "Vista creada exitosamente: " + viewName, "Éxito", JOptionPane.INFORMATION_MESSAGE);
+    } catch (SQLException e) {
+        JOptionPane.showMessageDialog(null, "Error al crear la vista: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+    }
+}
+
 }
