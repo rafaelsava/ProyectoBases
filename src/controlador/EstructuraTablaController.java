@@ -78,42 +78,103 @@ public class EstructuraTablaController implements Initializable {
     @FXML
     private void doTable(ActionEvent event) {
     }
+@FXML
+private void doAddRegisters(ActionEvent event) {
+    String selectedDatabase = this.cbxDB.getValue();
+    String selectedTable = this.cbxTable.getValue();
 
-    @FXML
-    private void doAddRegisters(ActionEvent event) {
-        String selectedDatabase = this.cbxDB.getValue();
-        String selectedTable = this.cbxTable.getValue();
+    if (selectedDatabase == null || selectedTable == null) {
+        showMessage("Debe seleccionar una base de datos y una tabla.", "Error", JOptionPane.ERROR_MESSAGE);
+        return;
+    }
 
-        if (selectedDatabase == null || selectedTable == null) {
-            showMessage("Debe seleccionar una base de datos y una tabla.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
+    ArrayList<String[]> columnsWithTypes = getColumnsWithTypes(selectedDatabase, selectedTable);
+    ArrayList<String> values = new ArrayList<>();
+
+    // Variable para determinar si el usuario cancela la operación
+    boolean isCancelled = false;
+
+    for (String[] column : columnsWithTypes) {
+        String columnName = column[0];
+        String columnType = column[1];
+        boolean isNullable = column[2].equalsIgnoreCase("YES");
+        boolean isForeignKey = isForeignKey(selectedDatabase, selectedTable, columnName);
+
+        String inputMessage = "Ingrese el valor para '" + columnName + "' (Tipo: " + columnType + ")";
+        if (!isNullable) {
+            inputMessage += " (Obligatorio)";
         }
 
-        // Obtén la estructura de la tabla para saber los tipos de datos.
-        ArrayList<String[]> columnsWithTypes = getColumnsWithTypes(selectedDatabase, selectedTable);
+        String value = null;
 
-        ArrayList<String> values = new ArrayList<>();
-
-        // Solicita al usuario valores para cada columna.
-        for (String[] column : columnsWithTypes) {
-            String columnName = column[0];
-            String columnType = column[1]; // Tipo de dato
-            String inputMessage = "Ingrese el valor para '" + columnName + "' (Tipo: " + columnType + "):";
-
-            String value = JOptionPane.showInputDialog(null, inputMessage, "Agregar Registro", JOptionPane.QUESTION_MESSAGE);
-
-            if (value == null) { // Si el usuario cancela.
-                showMessage("Operación cancelada.", "Información", JOptionPane.INFORMATION_MESSAGE);
+        if (isForeignKey) {
+            // Obtener valores válidos para claves foráneas
+            ArrayList<String> foreignKeyValues = getForeignKeyValues(selectedDatabase, selectedTable, columnName);
+            if (foreignKeyValues.isEmpty()) {
+                showMessage("No hay valores válidos para la clave foránea '" + columnName + "'.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
-            // Si está vacío, se usa NULL.
-            values.add(value.trim().isEmpty() ? "NULL" : "'" + value + "'");
+            Object selectedValue = JOptionPane.showInputDialog(
+                    null,
+                    "Seleccione un valor para " + columnName + " (Tipo: " + columnType + "):",
+                    "Agregar Registro",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    foreignKeyValues.toArray(),
+                    foreignKeyValues.get(0)
+            );
+
+            if (selectedValue == null) {
+                isCancelled = true; // Usuario canceló
+                break;
+            } else {
+                value = selectedValue.toString();
+            }
+        } else {
+            // Solicitar entrada al usuario para columnas normales
+            while (true) {
+                value = JOptionPane.showInputDialog(null, inputMessage, "Agregar Registro", JOptionPane.QUESTION_MESSAGE);
+                
+                if (value == null) {
+                    // El usuario canceló
+                    if (!isNullable) {
+                        int confirm = JOptionPane.showConfirmDialog(
+                                null,
+                                "El campo '" + columnName + "' es obligatorio. ¿Desea cancelar toda la operación?",
+                                "Confirmación",
+                                JOptionPane.YES_NO_OPTION,
+                                JOptionPane.WARNING_MESSAGE
+                        );
+
+                        if (confirm == JOptionPane.YES_OPTION) {
+                            isCancelled = true; // Cancelar toda la operación
+                            break;
+                        }
+                    } else {
+                        isCancelled = true;
+                        break;
+                    }
+                } else {
+                    break; // Salir del bucle si el usuario ingresó un valor
+                }
+            }
+
+            if (isCancelled) {
+                break; // Romper el bucle principal si el usuario decide cancelar
+            }
         }
 
-        // Construye y ejecuta la consulta SQL INSERT INTO.
-        insertIntoTable(selectedDatabase, selectedTable, columnsWithTypes, values);
+        values.add(value == null || value.trim().isEmpty() ? "NULL" : "'" + value + "'");
     }
+
+    if (isCancelled) {
+        showMessage("Operación cancelada por el usuario.", "Cancelación", JOptionPane.INFORMATION_MESSAGE);
+        return; // Finalizar el método si el usuario cancela
+    }
+
+    insertIntoTable(selectedDatabase, selectedTable, columnsWithTypes, values);
+}
 
     private ArrayList<String[]> getColumnsWithTypes(String databaseName, String tableName) {
         ArrayList<String[]> columnsWithTypes = new ArrayList<>();
@@ -123,13 +184,57 @@ public class EstructuraTablaController implements Initializable {
             while (resultSet.next()) {
                 String columnName = resultSet.getString("Field");
                 String columnType = resultSet.getString("Type");
-                columnsWithTypes.add(new String[]{columnName, columnType});
+                String isNullable = resultSet.getString("Null");
+                columnsWithTypes.add(new String[]{columnName, columnType, isNullable});
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
         return columnsWithTypes;
+    }
+
+    private boolean isForeignKey(String databaseName, String tableName, String columnName) {
+        String query = String.format(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+                + "WHERE TABLE_NAME = '%s' AND TABLE_SCHEMA = '%s' AND COLUMN_NAME = '%s' AND REFERENCED_TABLE_NAME IS NOT NULL",
+                tableName, databaseName, columnName
+        );
+
+        try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private ArrayList<String> getForeignKeyValues(String databaseName, String tableName, String columnName) {
+        ArrayList<String> values = new ArrayList<>();
+        String query = String.format(
+                "SELECT REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME "
+                + "FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+                + "WHERE TABLE_NAME = '%s' AND TABLE_SCHEMA = '%s' AND COLUMN_NAME = '%s' AND REFERENCED_TABLE_NAME IS NOT NULL",
+                tableName, databaseName, columnName
+        );
+
+        try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
+            if (resultSet.next()) {
+                String referencedTable = resultSet.getString("REFERENCED_TABLE_NAME");
+                String referencedColumn = resultSet.getString("REFERENCED_COLUMN_NAME");
+                String valueQuery = String.format("SELECT %s FROM %s.%s", referencedColumn, databaseName, referencedTable);
+
+                try (Statement valueStatement = connection.createStatement(); ResultSet valueResultSet = valueStatement.executeQuery(valueQuery)) {
+                    while (valueResultSet.next()) {
+                        values.add(valueResultSet.getString(1));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return values;
     }
 
     private void insertIntoTable(String databaseName, String tableName, ArrayList<String[]> columnsWithTypes, ArrayList<String> values) {
