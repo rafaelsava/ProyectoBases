@@ -257,25 +257,26 @@ public class QueryResultController implements Initializable {
         // Obtiene las filas seleccionadas en el TableView.
         ObservableList<ObservableList<String>> selectedRows = tblQueryResult.getSelectionModel().getSelectedItems();
 
-        // Verifica que solo se haya seleccionado exactamente una fila para editar.
+        // Verifica que solo se haya seleccionado exactamente una fila.
         if (selectedRows.size() != 1) {
             showMessage("Debe seleccionar exactamente un registro para editar.", "Error", JOptionPane.ERROR_MESSAGE);
-            return; // Sale del método si no hay una fila o hay más de una seleccionada.
+            return; // Sale del método si no hay exactamente una fila seleccionada.
         }
 
         // Obtiene la fila seleccionada.
         ObservableList<String> selectedRow = selectedRows.get(0);
 
-        // Obtiene las columnas del TableView y sus tipos de datos.
+        // Obtiene las columnas del TableView y sus tipos de datos asociados.
         ObservableList<TableColumn<ObservableList<String>, ?>> columns = tblQueryResult.getColumns();
-        List<String[]> columnNamesWithTypes = getColumnNamesAndTypes();
+        List<String[]> columnNamesWithTypes = getColumnNamesAndTypes(); // Lista con nombres de columnas y tipos de datos.
 
-        // Muestra un diálogo para seleccionar el campo a editar.
+        // Prepara una lista para mostrar los nombres de las columnas con sus tipos.
         List<String> columnNames = new ArrayList<>();
         for (String[] column : columnNamesWithTypes) {
-            columnNames.add(column[0] + " (Tipo: " + column[1] + ")");
+            columnNames.add(column[0] + " (Tipo: " + column[1] + ")"); // Agrega "Nombre (Tipo: TipoDato)".
         }
 
+        // Muestra un cuadro de diálogo para seleccionar el campo a editar.
         String selectedField = (String) JOptionPane.showInputDialog(
                 null, "Seleccione el campo a editar:", "Modificar Campo",
                 JOptionPane.QUESTION_MESSAGE, null, columnNames.toArray(), columnNames.get(0)
@@ -288,31 +289,65 @@ public class QueryResultController implements Initializable {
         }
 
         // Obtiene el índice de la columna seleccionada y el nombre del campo.
-        int columnIndex = columnNames.indexOf(selectedField);
-        String fieldName = columnNamesWithTypes.get(columnIndex)[0];
+        int columnIndex = columnNames.indexOf(selectedField); // Índice de la columna seleccionada.
+        String fieldName = columnNamesWithTypes.get(columnIndex)[0]; // Nombre del campo seleccionado.
 
-        // Muestra un diálogo para ingresar el nuevo valor del campo seleccionado.
-        String newValue = JOptionPane.showInputDialog(
-                null,
-                "Ingrese el nuevo valor para el campo '" + fieldName + "' (Tipo: " + columnNamesWithTypes.get(columnIndex)[1] + "):",
-                selectedRow.get(columnIndex)
-        );
+        // Obtiene el nombre de la tabla desde la consulta original.
+        String tableName = getTableNameFromQuery(this.query); // Nombre de la tabla con posible prefijo.
+        String tableNameOnly = tableName.substring(tableName.indexOf('.') + 1); // Remueve el prefijo si existe.
 
-        // Verifica que se haya ingresado un valor.
-        if (newValue == null) {
-            showMessage("Debe ingresar un nuevo valor para el campo.", "Error", JOptionPane.ERROR_MESSAGE);
-            return; // Sale del método si no se ingresa un valor.
+        // Declara la variable para almacenar el nuevo valor del campo.
+        String newValue;
+
+        // Verifica si el campo es una clave foránea.
+        if (this.isForeignKey(this.DBName, tableNameOnly, fieldName)) {
+            // Obtiene los valores válidos para la clave foránea.
+            ArrayList<String> foreignKeyValues = getForeignKeyValues(this.DBName, tableNameOnly, fieldName);
+            if (foreignKeyValues.isEmpty()) {
+                showMessage("No hay valores válidos para la clave foránea '" + fieldName + "'.", "Error", JOptionPane.ERROR_MESSAGE);
+                return; // Sale del método si no hay valores válidos para la clave foránea.
+            }
+
+            // Muestra un cuadro de diálogo para seleccionar un valor de clave foránea.
+            Object selectedValue = JOptionPane.showInputDialog(
+                    null,
+                    "Seleccione un valor para " + fieldName + " :",
+                    "Agregar Registro",
+                    JOptionPane.QUESTION_MESSAGE,
+                    null,
+                    foreignKeyValues.toArray(),
+                    foreignKeyValues.get(0) // Valor predeterminado.
+            );
+
+            // Verifica que se haya seleccionado un valor válido.
+            if (selectedValue == null) {
+                showMessage("Debe seleccionar un valor válido.", "Error", JOptionPane.ERROR_MESSAGE);
+                return; // Sale del método si no se selecciona un valor.
+            }
+
+            // Convierte el valor seleccionado a String.
+            newValue = selectedValue.toString();
+        } else {
+            // Muestra un cuadro de diálogo para ingresar el nuevo valor del campo.
+            newValue = JOptionPane.showInputDialog(
+                    null,
+                    "Ingrese el nuevo valor para el campo '" + fieldName + "' (Tipo: " + columnNamesWithTypes.get(columnIndex)[1] + "):",
+                    selectedRow.get(columnIndex) // Valor actual como predeterminado.
+            );
+
+            // Verifica que se haya ingresado un valor.
+            if (newValue == null) {
+                showMessage("Debe ingresar un nuevo valor para el campo.", "Error", JOptionPane.ERROR_MESSAGE);
+                return; // Sale del método si no se ingresa un valor.
+            }
         }
 
-        // Inicia un bloque try-with-resources para manejar el recurso Statement.
+        // Intenta ejecutar la actualización en la base de datos.
         try (Statement statement = connection.createStatement()) {
-            // Obtiene el nombre de la tabla desde la consulta original.
-            String tableName = getTableNameFromQuery(this.query);
-
             // Construye la cláusula WHERE basada en la fila seleccionada.
             String whereClause = buildWhereClause(columns, selectedRow);
 
-            // Si el nuevo valor es vacío, lo establece como NULL; de lo contrario, lo envuelve en comillas.
+            // Prepara el nuevo valor para la consulta SQL (NULL si está vacío).
             String updateValue = newValue.trim().isEmpty() ? "NULL" : "'" + newValue + "'";
 
             // Construye la consulta SQL de actualización.
@@ -323,9 +358,9 @@ public class QueryResultController implements Initializable {
 
             // Muestra un mensaje de éxito y recarga los datos del TableView.
             showMessage("Registro actualizado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-            loadTableData();
+            loadTableData(); // Recarga los datos actualizados en el TableView.
         } catch (SQLException e) {
-            // Muestra un mensaje de error en caso de problemas con la actualización.
+            // Muestra un mensaje de error si ocurre algún problema con la actualización.
             showMessage("Error al actualizar el registro: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -399,4 +434,46 @@ public class QueryResultController implements Initializable {
         return columnNamesWithTypes;
     }
 
+    private boolean isForeignKey(String databaseName, String tableName, String columnName) {
+        String query = String.format(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+                + "WHERE TABLE_NAME = '%s' AND TABLE_SCHEMA = '%s' AND COLUMN_NAME = '%s' AND REFERENCED_TABLE_NAME IS NOT NULL",
+                tableName, databaseName, columnName
+        );
+
+        try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private ArrayList<String> getForeignKeyValues(String databaseName, String tableName, String columnName) {
+        ArrayList<String> values = new ArrayList<>();
+        String query = String.format(
+                "SELECT REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME "
+                + "FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+                + "WHERE TABLE_NAME = '%s' AND TABLE_SCHEMA = '%s' AND COLUMN_NAME = '%s' AND REFERENCED_TABLE_NAME IS NOT NULL",
+                tableName, databaseName, columnName
+        );
+
+        try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
+            if (resultSet.next()) {
+                String referencedTable = resultSet.getString("REFERENCED_TABLE_NAME");
+                String referencedColumn = resultSet.getString("REFERENCED_COLUMN_NAME");
+                String valueQuery = String.format("SELECT %s FROM %s.%s", referencedColumn, databaseName, referencedTable);
+
+                try (Statement valueStatement = connection.createStatement(); ResultSet valueResultSet = valueStatement.executeQuery(valueQuery)) {
+                    while (valueResultSet.next()) {
+                        values.add(valueResultSet.getString(1));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return values;
+    }
 }
