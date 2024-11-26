@@ -12,8 +12,8 @@
    <children>
       <Pane layoutX="14.0" layoutY="9.0" prefHeight="405.0" prefWidth="608.0">
          <children>
-            <ComboBox fx:id="cbxDB" layoutX="46.0" layoutY="67.0" onAction="#doDB" prefHeight="25.0" prefWidth="150.0" promptText="Seleccione una DB" />
-            <ComboBox fx:id="cbxTable" layoutX="207.0" layoutY="67.0" onAction="#doTable" prefHeight="25.0" prefWidth="156.0" promptText="Selecciona tabla/vista" />
+            <ComboBox fx:id="cbxDB" layoutX="46.0" layoutY="67.0" onAction="#doDB" prefHeight="25.0" prefWidth="141.0" promptText="Seleccione una DB" />
+            <ComboBox fx:id="cbxTable" layoutX="197.0" layoutY="67.0" onAction="#doTable" prefHeight="25.0" prefWidth="158.0" promptText="Selecciona tabla/vista" />
             <Label layoutX="23.0" layoutY="14.0" text="Elige una tabla y mira su estructura">
                <font>
                   <Font size="18.0" />
@@ -21,7 +21,7 @@
             </Label>
             <TableView fx:id="tblStructure" layoutX="42.0" layoutY="117.0" prefHeight="229.0" prefWidth="502.0" />
             <Button fx:id="btnAddRegisters" layoutX="95.0" layoutY="366.0" mnemonicParsing="false" onAction="#doAddRegisters" prefHeight="25.0" prefWidth="133.0" text="Agregar Registros" />
-            <Button fx:id="btnSearch" layoutX="378.0" layoutY="67.0" mnemonicParsing="false" onAction="#doSearch" prefHeight="25.0" prefWidth="61.0" text="Buscar" />
+            <Button fx:id="btnSearch" layoutX="367.0" layoutY="67.0" mnemonicParsing="false" onAction="#doSearch" prefHeight="25.0" prefWidth="72.0" text="Estructura" />
             <Button fx:id="btnQuery" layoutX="322.0" layoutY="366.0" mnemonicParsing="false" onAction="#doQuery" prefHeight="25.0" prefWidth="133.0" text="Hacer Query" />
             <Button fx:id="btnShowAll" layoutX="450.0" layoutY="67.0" mnemonicParsing="false" onAction="#doShowAll" prefHeight="25.0" prefWidth="94.0" text="Mostrar Datos" />
          </children>

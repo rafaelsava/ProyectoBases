@@ -419,6 +419,7 @@ public class QueryResultController implements Initializable {
     }
 
     private List<String[]> getColumnNamesAndTypes() {
+        ObservableList<TableColumn<ObservableList<String>, ?>> columns = tblQueryResult.getColumns();
         List<String[]> columnNamesWithTypes = new ArrayList<>();
         String query = "DESCRIBE " + getTableNameFromQuery(this.query); // Usa el esquema de la tabla.
         try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
@@ -426,8 +427,17 @@ public class QueryResultController implements Initializable {
             while (resultSet.next()) {
                 String columnName = resultSet.getString("Field"); // Nombre de la columna.
                 String columnType = resultSet.getString("Type"); // Tipo de la columna.
-                columnNamesWithTypes.add(new String[]{columnName, columnType});
+
+                // Verificar si columnName está en las columnas de la tabla.
+                boolean columnExists = columns.stream()
+                        .anyMatch(column -> column.getText().equals(columnName));
+
+                if (columnExists) {
+                    // Si la columna existe, agregarla a columnNamesWithTypes
+                    columnNamesWithTypes.add(new String[]{columnName, columnType});
+                }
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }

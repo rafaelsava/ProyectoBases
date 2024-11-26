@@ -78,103 +78,104 @@ public class EstructuraTablaController implements Initializable {
     @FXML
     private void doTable(ActionEvent event) {
     }
-@FXML
-private void doAddRegisters(ActionEvent event) {
-    String selectedDatabase = this.cbxDB.getValue();
-    String selectedTable = this.cbxTable.getValue();
 
-    if (selectedDatabase == null || selectedTable == null) {
-        showMessage("Debe seleccionar una base de datos y una tabla.", "Error", JOptionPane.ERROR_MESSAGE);
-        return;
-    }
+    @FXML
+    private void doAddRegisters(ActionEvent event) {
+        String selectedDatabase = this.cbxDB.getValue();
+        String selectedTable = this.cbxTable.getValue();
 
-    ArrayList<String[]> columnsWithTypes = getColumnsWithTypes(selectedDatabase, selectedTable);
-    ArrayList<String> values = new ArrayList<>();
-
-    // Variable para determinar si el usuario cancela la operación
-    boolean isCancelled = false;
-
-    for (String[] column : columnsWithTypes) {
-        String columnName = column[0];
-        String columnType = column[1];
-        boolean isNullable = column[2].equalsIgnoreCase("YES");
-        boolean isForeignKey = isForeignKey(selectedDatabase, selectedTable, columnName);
-
-        String inputMessage = "Ingrese el valor para '" + columnName + "' (Tipo: " + columnType + ")";
-        if (!isNullable) {
-            inputMessage += " (Obligatorio)";
+        if (selectedDatabase == null || selectedTable == null) {
+            showMessage("Debe seleccionar una base de datos y una tabla.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
         }
 
-        String value = null;
+        ArrayList<String[]> columnsWithTypes = getColumnsWithTypes(selectedDatabase, selectedTable);
+        ArrayList<String> values = new ArrayList<>();
 
-        if (isForeignKey) {
-            // Obtener valores válidos para claves foráneas
-            ArrayList<String> foreignKeyValues = getForeignKeyValues(selectedDatabase, selectedTable, columnName);
-            if (foreignKeyValues.isEmpty()) {
-                showMessage("No hay valores válidos para la clave foránea '" + columnName + "'.", "Error", JOptionPane.ERROR_MESSAGE);
-                return;
+        // Variable para determinar si el usuario cancela la operación
+        boolean isCancelled = false;
+
+        for (String[] column : columnsWithTypes) {
+            String columnName = column[0];
+            String columnType = column[1];
+            boolean isNullable = column[2].equalsIgnoreCase("YES");
+            boolean isForeignKey = isForeignKey(selectedDatabase, selectedTable, columnName);
+
+            String inputMessage = "Ingrese el valor para '" + columnName + "' (Tipo: " + columnType + ")";
+            if (!isNullable) {
+                inputMessage += " (Obligatorio)";
             }
 
-            Object selectedValue = JOptionPane.showInputDialog(
-                    null,
-                    "Seleccione un valor para " + columnName + " (Tipo: " + columnType + "):",
-                    "Agregar Registro",
-                    JOptionPane.QUESTION_MESSAGE,
-                    null,
-                    foreignKeyValues.toArray(),
-                    foreignKeyValues.get(0)
-            );
+            String value = null;
 
-            if (selectedValue == null) {
-                isCancelled = true; // Usuario canceló
-                break;
+            if (isForeignKey) {
+                // Obtener valores válidos para claves foráneas
+                ArrayList<String> foreignKeyValues = getForeignKeyValues(selectedDatabase, selectedTable, columnName);
+                if (foreignKeyValues.isEmpty()) {
+                    showMessage("No hay valores válidos para la clave foránea '" + columnName + "'.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                Object selectedValue = JOptionPane.showInputDialog(
+                        null,
+                        "Seleccione un valor para " + columnName + " (Tipo: " + columnType + "):",
+                        "Agregar Registro",
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        foreignKeyValues.toArray(),
+                        foreignKeyValues.get(0)
+                );
+
+                if (selectedValue == null) {
+                    isCancelled = true; // Usuario canceló
+                    break;
+                } else {
+                    value = selectedValue.toString();
+                }
             } else {
-                value = selectedValue.toString();
-            }
-        } else {
-            // Solicitar entrada al usuario para columnas normales
-            while (true) {
-                value = JOptionPane.showInputDialog(null, inputMessage, "Agregar Registro", JOptionPane.QUESTION_MESSAGE);
-                
-                if (value == null) {
-                    // El usuario canceló
-                    if (!isNullable) {
-                        int confirm = JOptionPane.showConfirmDialog(
-                                null,
-                                "El campo '" + columnName + "' es obligatorio. ¿Desea cancelar toda la operación?",
-                                "Confirmación",
-                                JOptionPane.YES_NO_OPTION,
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                // Solicitar entrada al usuario para columnas normales
+                while (true) {
+                    value = JOptionPane.showInputDialog(null, inputMessage, "Agregar Registro", JOptionPane.QUESTION_MESSAGE);
 
-                        if (confirm == JOptionPane.YES_OPTION) {
-                            isCancelled = true; // Cancelar toda la operación
+                    if (value == null) {
+                        // El usuario canceló
+                        if (!isNullable) {
+                            int confirm = JOptionPane.showConfirmDialog(
+                                    null,
+                                    "El campo '" + columnName + "' es obligatorio. ¿Desea cancelar toda la operación?",
+                                    "Confirmación",
+                                    JOptionPane.YES_NO_OPTION,
+                                    JOptionPane.WARNING_MESSAGE
+                            );
+
+                            if (confirm == JOptionPane.YES_OPTION) {
+                                isCancelled = true; // Cancelar toda la operación
+                                break;
+                            }
+                        } else {
+                            isCancelled = true;
                             break;
                         }
                     } else {
-                        isCancelled = true;
-                        break;
+                        break; // Salir del bucle si el usuario ingresó un valor
                     }
-                } else {
-                    break; // Salir del bucle si el usuario ingresó un valor
+                }
+
+                if (isCancelled) {
+                    break; // Romper el bucle principal si el usuario decide cancelar
                 }
             }
 
-            if (isCancelled) {
-                break; // Romper el bucle principal si el usuario decide cancelar
-            }
+            values.add(value == null || value.trim().isEmpty() ? "NULL" : "'" + value + "'");
         }
 
-        values.add(value == null || value.trim().isEmpty() ? "NULL" : "'" + value + "'");
-    }
+        if (isCancelled) {
+            showMessage("Operación cancelada por el usuario.", "Cancelación", JOptionPane.INFORMATION_MESSAGE);
+            return; // Finalizar el método si el usuario cancela
+        }
 
-    if (isCancelled) {
-        showMessage("Operación cancelada por el usuario.", "Cancelación", JOptionPane.INFORMATION_MESSAGE);
-        return; // Finalizar el método si el usuario cancela
+        insertIntoTable(selectedDatabase, selectedTable, columnsWithTypes, values);
     }
-
-    insertIntoTable(selectedDatabase, selectedTable, columnsWithTypes, values);
-}
 
     private ArrayList<String[]> getColumnsWithTypes(String databaseName, String tableName) {
         ArrayList<String[]> columnsWithTypes = new ArrayList<>();
