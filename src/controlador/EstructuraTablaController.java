@@ -31,6 +31,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.stage.Stage;
 import controlador.QueriesController;
 import java.util.HashSet;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.cell.PropertyValueFactory;
 
 /**
  * FXML Controller class
@@ -64,6 +66,7 @@ public class EstructuraTablaController implements Initializable {
 
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+
     }
 
     @FXML
@@ -81,55 +84,194 @@ public class EstructuraTablaController implements Initializable {
 
     @FXML
     private void doAddRegisters(ActionEvent event) {
+
         String selectedDatabase = this.cbxDB.getValue();
         String selectedTable = this.cbxTable.getValue();
 
-        if (selectedDatabase == null || selectedTable == null) {
-            showMessage("Debe seleccionar una base de datos y una tabla.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+        if (selectedDatabase != null && selectedTable != null) {
+            try {
+                // Obtener las columnas de la tabla seleccionada
+                String describeQuery = String.format("DESCRIBE %s.%s", selectedDatabase, selectedTable);
+                ArrayList<String> columnNames = new ArrayList<>();
+                ArrayList<Boolean> isNullable = new ArrayList<>();
+                ArrayList<String> columnTypes = new ArrayList<>();
+                ArrayList<String> foreignKeys = new ArrayList<>();
+                String primaryKeyColumn = null;
 
-        // Obtén la estructura de la tabla para saber los tipos de datos.
-        ArrayList<String[]> columnsWithTypes = getColumnsWithTypes(selectedDatabase, selectedTable);
+                try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(describeQuery)) {
+                    while (resultSet.next()) {
+                        String columnName = resultSet.getString("Field");
+                        columnNames.add(columnName);
+                        isNullable.add("YES".equalsIgnoreCase(resultSet.getString("Null")));
+                        columnTypes.add(resultSet.getString("Type"));
 
-        ArrayList<String> values = new ArrayList<>();
+                        // Verificar si la columna es una clave primaria
+                        if ("PRI".equalsIgnoreCase(resultSet.getString("Key"))) {
+                            primaryKeyColumn = columnName;
+                        }
 
-        // Solicita al usuario valores para cada columna.
-        for (String[] column : columnsWithTypes) {
-            String columnName = column[0];
-            String columnType = column[1]; // Tipo de dato
-            String inputMessage = "Ingrese el valor para '" + columnName + "' (Tipo: " + columnType + "):";
+                        // Verificar si la columna es una clave foránea
+                        if (isForeignKey(columnName, selectedTable, selectedDatabase)) {
+                            foreignKeys.add(columnName);
+                        }
+                    }
+                }
 
-            String value = JOptionPane.showInputDialog(null, inputMessage, "Agregar Registro", JOptionPane.QUESTION_MESSAGE);
+                // Determinar el próximo valor para la clave primaria
+                int nextPrimaryKey = 1;
+                if (primaryKeyColumn != null) {
+                    String maxPrimaryKeyQuery = String.format("SELECT MAX(%s) AS maxKey FROM %s.%s", primaryKeyColumn, selectedDatabase, selectedTable);
+                    try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(maxPrimaryKeyQuery)) {
+                        if (resultSet.next()) {
+                            String maxKey = resultSet.getString("maxKey");
+                            if (maxKey != null && maxKey.matches("\\d+")) { // Verifica si es numérico
+                                nextPrimaryKey = Integer.parseInt(maxKey) + 1;
+                            } else {
+                                nextPrimaryKey = 1; // Valor predeterminado si no hay registros
+                            }
+                        }
+                    }
+                }
 
-            if (value == null) { // Si el usuario cancela.
-                showMessage("Operación cancelada.", "Información", JOptionPane.INFORMATION_MESSAGE);
-                return;
+                // Solicitar al usuario los valores de las columnas
+                ArrayList<String> values = new ArrayList<>();
+                for (int i = 0; i < columnNames.size(); i++) {
+                    String columnName = columnNames.get(i);
+                    String columnType = columnTypes.get(i);
+                    boolean nullable = isNullable.get(i);
+
+                    String value = null;
+
+                    // Si es la clave primaria, asignar automáticamente el próximo valor
+                    if (columnName.equals(primaryKeyColumn)) {
+                        values.add(String.valueOf(nextPrimaryKey));
+                        continue;
+                    }
+
+                    // Si es una clave foránea, mostrar valores válidos
+                    if (foreignKeys.contains(columnName)) {
+                        ArrayList<String> validValues = getForeignKeyValues(columnName, selectedTable, selectedDatabase);
+                        Object selectedValue = JOptionPane.showInputDialog(
+                                null,
+                                "Seleccione un valor para " + columnName + " (" + columnType + "):",
+                                "Agregar Registro",
+                                JOptionPane.QUESTION_MESSAGE,
+                                null,
+                                validValues.toArray(),
+                                validValues.get(0)
+                        );
+                        if (selectedValue != null) {
+                            value = selectedValue.toString();
+                        }
+                    } else {
+                        // Solicitar entrada normal para otras columnas
+                        String prompt = "Ingrese el valor para " + columnName + " (" + columnType + ")";
+                        if (!nullable) {
+                            prompt += " (Obligatorio)";
+                        }
+                        do {
+                            value = JOptionPane.showInputDialog(null, prompt, "Agregar Registro", JOptionPane.PLAIN_MESSAGE);
+                            if (value == null && !nullable) {
+                                JOptionPane.showMessageDialog(null, "Este campo es obligatorio.");
+                            }
+                        } while (value == null && !nullable);
+                    }
+
+                    values.add(value);
+                }
+
+                // Construir la consulta SQL para insertar el registro
+                StringBuilder columns = new StringBuilder();
+                StringBuilder placeholders = new StringBuilder();
+                for (String columnName : columnNames) {
+                    if (columns.length() > 0) {
+                        columns.append(", ");
+                        placeholders.append(", ");
+                    }
+                    columns.append(columnName);
+                    placeholders.append("?");
+                }
+
+                String insertQuery = String.format(
+                        "INSERT INTO %s.%s (%s) VALUES (%s)",
+                        selectedDatabase,
+                        selectedTable,
+                        columns,
+                        placeholders
+                );
+
+                // Ejecutar la consulta
+                try (java.sql.PreparedStatement preparedStatement = connection.prepareStatement(insertQuery)) {
+                    for (int i = 0; i < values.size(); i++) {
+                        preparedStatement.setString(i + 1, values.get(i));
+                    }
+                    int rowsAffected = preparedStatement.executeUpdate();
+                    if (rowsAffected > 0) {
+                        JOptionPane.showMessageDialog(null, "Registro agregado con éxito.");
+                    } else {
+                        JOptionPane.showMessageDialog(null, "No se pudo agregar el registro.");
+                    }
+                }
+
+                // Actualizar la tabla en la interfaz
+                loadTableData(selectedDatabase, selectedTable, connection, "searchAll");
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null, "Error al agregar el registro: " + e.getMessage());
             }
-
-            // Si está vacío, se usa NULL.
-            values.add(value.trim().isEmpty() ? "NULL" : "'" + value + "'");
+        } else {
+            JOptionPane.showMessageDialog(null, "Por favor, selecciona una base de datos y una tabla antes de agregar un registro.");
         }
-
-        // Construye y ejecuta la consulta SQL INSERT INTO.
-        insertIntoTable(selectedDatabase, selectedTable, columnsWithTypes, values);
     }
 
-    private ArrayList<String[]> getColumnsWithTypes(String databaseName, String tableName) {
-        ArrayList<String[]> columnsWithTypes = new ArrayList<>();
-        String query = "DESCRIBE " + databaseName + "." + tableName;
+    /**
+     * Verifica si una columna es una clave foránea.
+     */
+    private boolean isForeignKey(String columnName, String tableName, String databaseName) {
+        String query = String.format(
+                "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+                + "WHERE TABLE_NAME = '%s' AND TABLE_SCHEMA = '%s' AND COLUMN_NAME = '%s' AND REFERENCED_TABLE_NAME IS NOT NULL",
+                tableName, databaseName, columnName
+        );
 
         try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
-            while (resultSet.next()) {
-                String columnName = resultSet.getString("Field");
-                String columnType = resultSet.getString("Type");
-                columnsWithTypes.add(new String[]{columnName, columnType});
+            return resultSet.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    /**
+     * Obtiene los valores válidos para una clave foránea.
+     */
+    private ArrayList<String> getForeignKeyValues(String columnName, String tableName, String databaseName) {
+        ArrayList<String> values = new ArrayList<>();
+        String query = String.format(
+                "SELECT REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME "
+                + "FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE "
+                + "WHERE TABLE_NAME = '%s' AND TABLE_SCHEMA = '%s' AND COLUMN_NAME = '%s' AND REFERENCED_TABLE_NAME IS NOT NULL",
+                tableName, databaseName, columnName
+        );
+
+        try (Statement statement = connection.createStatement(); ResultSet resultSet = statement.executeQuery(query)) {
+            if (resultSet.next()) {
+                String referencedTable = resultSet.getString("REFERENCED_TABLE_NAME");
+                String referencedColumn = resultSet.getString("REFERENCED_COLUMN_NAME");
+                String valueQuery = String.format("SELECT %s FROM %s.%s", referencedColumn, databaseName, referencedTable);
+
+                try (Statement valueStatement = connection.createStatement(); ResultSet valueResultSet = valueStatement.executeQuery(valueQuery)) {
+                    while (valueResultSet.next()) {
+                        values.add(valueResultSet.getString(1));
+                    }
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
-        return columnsWithTypes;
+        return values;
     }
 
     private void insertIntoTable(String databaseName, String tableName, ArrayList<String[]> columnsWithTypes, ArrayList<String> values) {
